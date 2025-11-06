@@ -107,7 +107,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         <div class="login-wrapper">
             <div class="login-box">
                 <h2>Mad-<span>Exploits</span></h2>
-                <small>☺</small>
+                <small>Tiny File Manager</small>
                 <?php if (!empty($error)) echo "<div class='error'>$error</div>"; ?>
                 <form method="post">
                     <div class="form-group">
