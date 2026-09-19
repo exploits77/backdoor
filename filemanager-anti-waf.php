@@ -2863,7 +2863,7 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
         $('listViewBtn').classList.add('active');
         state.expanded.clear();
         render();
-        load().then(()=>toast('Settings reset')).catch(()=>toast('Settings reset'));
+        load().then(()=>toast('Visual settings have been reset successfully!')).catch(()=>toast('Settings reset'));
       }
       function modal(title,body,footer,editorMode=false){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modalFooter').innerHTML=footer;$('modal').classList.toggle('editor-modal',editorMode);$('editorHeaderTools').style.display=editorMode?'flex':'none';$('editorHeaderTools').innerHTML='';$('modal').classList.add('show')}
       function getEditorContent(){
