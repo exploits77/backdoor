@@ -80,7 +80,7 @@ function fm_size($b){ if($b<1024)return $b.' B'; $u=['B','KB','MB','GB','TB'];$i
 function fm_public_ip(){
     global $OO_00_file_get_contents_Func;
     if(isset($_SESSION['fm_public_ip'],$_SESSION['fm_public_ip_time']) && (time()-(int)$_SESSION['fm_public_ip_time'])<600) return $_SESSION['fm_public_ip'];
-    $ip='UNKNOWN'; $urls=['https://ipify.org','https://ifconfig.me'];
+    $ip='UNKNOWN'; $urls=['https://api.ipify.org','https://ifconfig.me/ip'];
     foreach($urls as $url){
         $ctx=stream_context_create(['http'=>['timeout'=>2,'ignore_errors'=>true],'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true]]);
         $v=@$OO_00_file_get_contents_Func($url,false,$ctx); $v=trim((string)$v);
