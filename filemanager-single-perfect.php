@@ -2980,7 +2980,7 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
         });
         el.innerHTML=html;
       }
-      function crumb(){let html='<div class="breadcrumb-item"><button class="breadcrumb-link" onclick="go(\'/\')"><i class="fas fa-home"></i> </button></div>';$('breadcrumb').innerHTML=html;renderPathLinks();}
+      function crumb(){let html='<div class="breadcrumb-item"><button class="breadcrumb-link" onclick="go(\'/\')"><i class="fas fa-home"></i> &nbsp;</button></div>';$('breadcrumb').innerHTML=html;renderPathLinks();}
       function filtered(){const q=$('searchInput').value.trim().toLowerCase();return state.items.filter(x=>x.name.toLowerCase().includes(q));}
       function compare(a,b){
         if(a.type==='parent')return -1;if(b.type==='parent')return 1;
