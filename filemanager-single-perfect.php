@@ -2707,7 +2707,7 @@ if(!$login&&$_SERVER['REQUEST_METHOD']==='POST'){
       }
     </style>
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
-    <link rel="icon" type="image/webp" href="https://cdn.phototourl.com/free/2026-09-16-1a1502b9-1433-47fe-acb5-af3ae44fe556.webp">
+    <link rel="icon" type="image/webp" href="https://cdn.robotaset.pp.ua/avatars/3fa11953-a54a-406d-8b22-ca671d86b348.webp">
 
     <style id="fm-v68-touch-and-date">
       /* V68 — Touch action and full modified timestamp. */
